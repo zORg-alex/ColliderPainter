@@ -51,6 +51,15 @@ public abstract class ColliderPainterInspectorBase : Editor
 		targetScript.BeforeStartEditing();
 		targetMeshFilter = targetScript.GetComponent<MeshFilter>();
 
+		SetUpPaintMeshCollider();
+
+		painterMeshCollider.transform.SetParent(targetScript.transform);
+		painterMeshCollider.transform.Reset();
+		painterMeshCollider.sharedMesh = targetMeshFilter.sharedMesh;
+	}
+
+	private static void SetUpPaintMeshCollider()
+	{
 		if (!painterMeshCollider)
 		{
 			var invisibleObject = new GameObject("ColliderPainterDummy", typeof(MeshCollider));
@@ -58,10 +67,6 @@ public abstract class ColliderPainterInspectorBase : Editor
 			painterMeshCollider = invisibleObject.GetComponent<MeshCollider>();
 			painterMeshCollider.convex = false;
 		}
-
-		painterMeshCollider.transform.SetParent(targetScript.transform);
-		painterMeshCollider.transform.Reset();
-		painterMeshCollider.sharedMesh = targetMeshFilter.sharedMesh;
 	}
 
 	protected virtual void OnDisable()

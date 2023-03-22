@@ -13,8 +13,8 @@ public class ColliderPainterInspector : ColliderPainterInspectorBase
 	private Material material;
 	private int materialColor;
 	private MaterialPropertyBlock materialPropertyBlock;
-	private GUIStyle centeredLabelStyle;
-	private GUIStyle boxStyle;
+	private GUIStyle centeredLabelStyle = new GUIStyle();
+	private GUIStyle boxStyle = new GUIStyle();
 
 	private GUIContent SceneGUIPaintIcon;
 	private GUIContent InspectorGUIPaintIcon;
@@ -34,31 +34,32 @@ public class ColliderPainterInspector : ColliderPainterInspectorBase
 	protected override void OnEnable()
 	{
 		base.OnEnable();
+		SceneGUIPaintIcon = EditorGUIUtility.IconContent("Grid.PaintTool");
+		InspectorGUIPaintIcon = EditorGUIUtility.IconContent("Grid.PaintTool");
+		InspectorGUIPaintIcon.tooltip = MainStartButtonTooltip;
+		var s = Shader.Find("Hidden/Internal-Colored");
+		material = new Material(s);
+		materialColor = Shader.PropertyToID("_Color");
+		materialPropertyBlock = new MaterialPropertyBlock();
 		if (!EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector)) return;
+
 		try
 		{
-			SceneGUIPaintIcon = EditorGUIUtility.IconContent("Grid.PaintTool");
-			InspectorGUIPaintIcon = EditorGUIUtility.IconContent("Grid.PaintTool");
-			InspectorGUIPaintIcon.tooltip = MainStartButtonTooltip;
 			centeredLabelStyle = new GUIStyle(EditorStyles.label);
 			centeredLabelStyle.alignment = TextAnchor.MiddleCenter;
 			boxStyle = "HelpBox";
-			var zzz = ShaderUtil.GetAllShaderInfo().Where(i => i.name.Contains("Handle")).ToArray();
-			var shaderinfo = ShaderUtil.GetAllShaderInfo().FirstOrDefault(i=> i.name.Contains("Handles Shaded"));
-			var s = Shader.Find("Hidden/Internal-Colored");
-			material = new Material(s);
-			materialColor = Shader.PropertyToID("_Color");
-			materialPropertyBlock = new MaterialPropertyBlock();
 		}
+
 		//Letting slip some calls after Assembly reload before things are ready
-		catch {}
+		catch { }
 
 		showDebug.valueChanged.AddListener(Repaint);
 		showDebug.value = showDebugFoldout;
 	}
 
-	private void OnDisable()
+	protected override void OnDisable()
 	{
+		base.OnDisable();
 		showDebug.valueChanged.RemoveListener(Repaint);
 	}
 
@@ -131,6 +132,7 @@ public class ColliderPainterInspector : ColliderPainterInspectorBase
 		{
 			Undo.RecordObject(target, target.ToString() + this);
 			var ray = HandleUtility.GUIPointToWorldRay(current.mousePosition);
+			if (!painterMeshCollider) { Debug.LogError("ColliderPainter missing internal painting MeshCollider"); return; }
 			if (!painterMeshCollider.Raycast(ray, out var hit, 100)) return;
 			if (_Ctrl)
 				targetScript.RemoveTriangle(currentlyEditedGroup, hit.triangleIndex);
