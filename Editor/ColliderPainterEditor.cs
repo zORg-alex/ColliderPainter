@@ -26,6 +26,9 @@ public class ColliderPainterInspector : ColliderPainterInspectorBase
 	private readonly AnimBool showDebug = new AnimBool();
 	private static bool showDebugFoldout;
 
+	private readonly AnimBool showTool = new AnimBool();
+	private static bool showToolFoldout = true;
+
 
 	private string MainStartButtonTooltip => "This mode locks selection to start painting.";
 
@@ -55,6 +58,8 @@ public class ColliderPainterInspector : ColliderPainterInspectorBase
 
 		showDebug.valueChanged.AddListener(Repaint);
 		showDebug.value = showDebugFoldout;
+		showTool.valueChanged.AddListener(SceneView.RepaintAll);
+		showTool.value = showToolFoldout;
 	}
 
 	protected override void OnDisable()
@@ -79,43 +84,47 @@ public class ColliderPainterInspector : ColliderPainterInspectorBase
 		DrawSceneWindow();
 		GUILayout.EndArea();
 	}
-
-	private float WindowHeight => (EditorGUIUtility.singleLineHeight + 4f) * (targetScript.GroupsCount + 1);
+	
+	private float WindowHeight => showTool.faded * ((EditorGUIUtility.singleLineHeight + 4f) * targetScript.GroupsCount) + EditorGUIUtility.singleLineHeight + 4f;
 	private void DrawSceneWindow()
 	{
-		GUILayout.BeginHorizontal();
-		GUILayout.Label("Collider Painter", centeredLabelStyle);
-		if (GUILayout.Button("+", GUILayout.Width(20)))
+		showToolFoldout = showTool.target = EditorGUILayout.Foldout(showTool.target, "ColliderPainter", true);
+		var addButtonRect = GUILayoutUtility.GetLastRect().Right(20);
+		if (EditorGUILayout.BeginFadeGroup(showTool.faded))
+		{
+
+			for (int i = 0; i < targetScript.GroupsCount; i++)
+			{
+				GUILayout.BeginHorizontal();
+				var group = targetScript.GetGroupInfo(i);
+				var name = GUILayout.TextField(group.name);
+
+				var color = group.color;
+				if (isEditing)
+					color = EditorGUILayout.ColorField(group.color, GUILayout.Width(70));
+
+				if (group.name != name || group.color != color)
+				{
+					Undo.RecordObject(target, target.ToString() + this);
+					group.name = name;
+					group.color = color;
+					targetScript.SetGroupNameColor(i, group);
+				}
+				DrawStartStopEditButton(false, i, GUILayout.Width(60));
+
+				if (GUILayout.Button("-", GUILayout.Width(20)))
+				{
+					Undo.RecordObject(target, target.ToString() + this);
+					targetScript.RemoveGroup(i);
+				}
+
+				GUILayout.EndHorizontal();
+			}
+		}
+		EditorGUILayout.EndFadeGroup();
+		if (GUI.Button(addButtonRect,"+"))
 		{
 			targetScript.AddGroup();
-		}
-		GUILayout.EndHorizontal();
-		for (int i = 0; i < targetScript.GroupsCount; i++)
-		{
-			GUILayout.BeginHorizontal();
-			var group = targetScript.GetGroupInfo(i);
-			var name = GUILayout.TextField(group.name);
-
-			var color = group.color;
-			if (isEditing)
-				color = EditorGUILayout.ColorField(group.color, GUILayout.Width(70));
-
-			if(group.name != name || group.color != color)
-			{
-				Undo.RecordObject(target, target.ToString() + this);
-				group.name = name;
-				group.color = color;
-				targetScript.SetGroupNameColor(i, group);
-			}
-			DrawStartStopEditButton(false, i, GUILayout.Width(60));
-
-			if (GUILayout.Button("-", GUILayout.Width(20)))
-			{
-				Undo.RecordObject(target, target.ToString() + this);
-				targetScript.RemoveGroup(i);
-			}
-
-			GUILayout.EndHorizontal();
 		}
 	}
 

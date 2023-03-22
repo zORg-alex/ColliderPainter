@@ -123,6 +123,19 @@ public static class Extensions
 		return rect;
 	}
 
+	public static Rect Right(this Rect rect, float width)
+	{
+		float num = Math.Min(rect.width, width);
+		Rect result = rect.AlignRight(num);
+		return result;
+	}
+	public static Rect AlignRight(this Rect rect, float width)
+	{
+		rect.x = rect.x + rect.width - width;
+		rect.width = width;
+		return rect;
+	}
+
 	public static T2[] SelectToArray<T1,T2>(this T1[] array, Func<T1,T2> selector)
 	{
 		var r = new T2[array.Length];
