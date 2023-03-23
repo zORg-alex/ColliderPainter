@@ -1,5 +1,5 @@
-﻿using NUnit.Framework.Internal;
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -104,16 +104,6 @@ public static class Extensions
 		return m;
 	}
 
-	//
-	// Summary:
-	//     Returns a Rect that has been expanded by the specified amount.
-	//
-	// Parameters:
-	//   rect:
-	//     The original Rect.
-	//
-	//   expand:
-	//     The desired expansion.
 	public static Rect Expand(this Rect rect, float expand)
 	{
 		rect.x -= expand;
@@ -123,10 +113,20 @@ public static class Extensions
 		return rect;
 	}
 
-	public static Rect Right(this Rect rect, float width)
+	public static Rect Expand(this Rect rect, float width, float height)
 	{
-		float num = Math.Min(rect.width, width);
-		Rect result = rect.AlignRight(num);
+		rect.x -= width;
+		rect.y -= height;
+		rect.height += height * 2f;
+		rect.width += width * 2f;
+		return rect;
+	}
+
+	public static Rect Right(this ref Rect rect, float width, float space = 2f)
+	{
+		float num = Math.Min(rect.width, width + space);
+		Rect result = rect.AlignRight(num - space);
+		rect.width -= num;
 		return result;
 	}
 	public static Rect AlignRight(this Rect rect, float width)
@@ -144,5 +144,77 @@ public static class Extensions
 			r[i] = selector(array[i]);
 		}
 		return r;
+	}
+
+	public static T[] Add<T>(this T[] array, T item)
+	{
+		var r = new T[array.Length + 1];
+		for (int i = 0; i < array.Length; i++)
+		{
+			r[i] = array[i];
+		}
+		r[array.Length] = item;
+		return r;
+	}
+	public static T[] Remove<T>(this T[] array, T item)
+	{
+		var r = new T[array.Length - 1];
+		bool itemFound = false;
+		for (int i = 0, j = 0; i < array.Length; j++, i++)
+		{
+			if (item.Equals(array[j]))
+			{ i++; itemFound = true; }
+			r[i] = array[j];
+		}
+		return itemFound ? r : array;
+	}
+	public static T[] RemoveAt<T>(this T[] array, int ind)
+	{
+		if (ind < 0 || ind > array.Length)
+			return array;
+		var r = new T[array.Length - 1];
+		for (int i = 0, j = 0; i < r.Length; j++, i++)
+		{
+			if (j == ind)
+				j++;
+			r[i] = array[j];
+		}
+		return r;
+	}
+
+	public static void PositionAsChildOfNonRigidBody(this Transform transform, Transform parentAsTo, out Transform[] temp)
+	{
+		var list = new List<Transform>();
+		var parentRigidBody = parentAsTo.GetComponentInParent<Rigidbody>().transform;
+		if (parentRigidBody)
+		{
+			Reconstruct(parentAsTo, parentRigidBody, ref list, transform);
+		}
+		temp = list.ToArray();
+
+		Transform Reconstruct(Transform transformCursor, Transform finalTransform, ref List<Transform> list, Transform copiedTransform = null)
+		{
+			Transform t;
+			if (copiedTransform == null)
+				copiedTransform = new GameObject().transform;
+			if (transformCursor != finalTransform)
+			{
+				copiedTransform.parent = Reconstruct(transformCursor.parent, finalTransform, ref list);
+			}
+			else
+			{
+				copiedTransform.parent = finalTransform.parent;
+			}
+			copiedTransform.SetLocalPositionAndRotation(transformCursor.localPosition, transformCursor.localRotation);
+			copiedTransform.localScale = transformCursor.localScale;
+			list.Add(copiedTransform);
+			return copiedTransform;
+		}
+	}
+
+	public static void DestroyImmediate(this IEnumerable<Transform> transforms)
+	{
+		foreach (Transform t in transforms)
+			UnityEngine.Object.DestroyImmediate(t.gameObject);
 	}
 }

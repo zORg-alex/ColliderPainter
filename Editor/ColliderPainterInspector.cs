@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEditor.AnimatedValues;
 using UnityEngine;
 
-[CustomEditor(typeof(ColliderPainterStateScript))]
+[CustomEditor(typeof(ColliderPainter))]
 public class ColliderPainterInspector : ColliderPainterInspectorBase
 {
 	private int controlID;
@@ -70,7 +70,9 @@ public class ColliderPainterInspector : ColliderPainterInspectorBase
 
 	public override void DrawSceneGUI()
 	{
-		if (isEditing)
+		var current = Event.current;
+		Rect windowPosition = new Rect(20, 20, 300, WindowHeight);
+		if (isEditing || windowPosition.Contains(current.mousePosition))
 		{
 			controlID = GUIUtility.GetControlID(37794724, FocusType.Passive);
 			if (Event.current.type == EventType.Layout)
@@ -78,9 +80,8 @@ public class ColliderPainterInspector : ColliderPainterInspectorBase
 				HandleUtility.AddDefaultControl(controlID);
 		}
 
-		Rect position = new Rect(20, 20, 300, WindowHeight);
-		GUI.Box(position.Expand(4), GUIContent.none, boxStyle);
-		GUILayout.BeginArea(position);
+		GUI.Box(windowPosition.Expand(4), GUIContent.none, boxStyle);
+		GUILayout.BeginArea(windowPosition);
 		DrawSceneWindow();
 		GUILayout.EndArea();
 	}
@@ -88,11 +89,16 @@ public class ColliderPainterInspector : ColliderPainterInspectorBase
 	private float WindowHeight => showTool.faded * ((EditorGUIUtility.singleLineHeight + 4f) * targetScript.GroupsCount) + EditorGUIUtility.singleLineHeight + 4f;
 	private void DrawSceneWindow()
 	{
-		showToolFoldout = showTool.target = EditorGUILayout.Foldout(showTool.target, "ColliderPainter", true);
-		var addButtonRect = GUILayoutUtility.GetLastRect().Right(20);
+		var toolsRect = GUILayoutUtility.GetRect(300, 20).Expand(-3f,0f);
+		Rect addButtonRect = toolsRect.Right(20);
+
+		showToolFoldout = showTool.target = EditorGUI.Foldout(toolsRect, showTool.target, "ColliderPainter", true);
+		if (GUI.Button(addButtonRect, "+"))
+		{
+			targetScript.AddGroup();
+		}
 		if (EditorGUILayout.BeginFadeGroup(showTool.faded))
 		{
-
 			for (int i = 0; i < targetScript.GroupsCount; i++)
 			{
 				GUILayout.BeginHorizontal();
@@ -116,16 +122,14 @@ public class ColliderPainterInspector : ColliderPainterInspectorBase
 				{
 					Undo.RecordObject(target, target.ToString() + this);
 					targetScript.RemoveGroup(i);
+					if (currentlyEditedGroup == i)
+						StopEditing();
 				}
 
 				GUILayout.EndHorizontal();
 			}
 		}
 		EditorGUILayout.EndFadeGroup();
-		if (GUI.Button(addButtonRect,"+"))
-		{
-			targetScript.AddGroup();
-		}
 	}
 
 	public override void DrawSceneView()
@@ -142,7 +146,7 @@ public class ColliderPainterInspector : ColliderPainterInspectorBase
 			Undo.RecordObject(target, target.ToString() + this);
 			var ray = HandleUtility.GUIPointToWorldRay(current.mousePosition);
 			if (!painterMeshCollider) { Debug.LogError("ColliderPainter missing internal painting MeshCollider"); return; }
-			if (!painterMeshCollider.Raycast(ray, out var hit, 100)) return;
+			if (!painterMeshCollider.Raycast(ray, out var hit, 10000)) return;
 			if (_Ctrl)
 				targetScript.RemoveTriangle(currentlyEditedGroup, hit.triangleIndex);
 			else
@@ -228,12 +232,12 @@ public class ColliderPainterInspector : ColliderPainterInspectorBase
 	public static void MenuStartEditing()
 	{
 		var editedObject = Selection.activeGameObject;
-		var script = editedObject.GetComponent<ColliderPainterStateScript>();
+		var script = editedObject.GetComponent<ColliderPainter>();
 		if (script == null)
 		{
-			script = Selection.activeGameObject.AddComponent<ColliderPainterStateScript>();
+			script = Selection.activeGameObject.AddComponent<ColliderPainter>();
 			Component[] components = script.GetComponents<Component>();
-			var ind = components.IndexOf(c => c.GetType() == typeof(ColliderPainterStateScript));
+			var ind = components.IndexOf(c => c.GetType() == typeof(ColliderPainter));
 			if (ind == components.Length - 1)
 				for (int i = 0; i < ind - 1; i++)
 					UnityEditorInternal.ComponentUtility.MoveComponentUp(script);

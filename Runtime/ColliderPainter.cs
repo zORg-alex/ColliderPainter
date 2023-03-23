@@ -1,24 +1,26 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using UnityEngine;
 
 [RequireComponent(typeof(MeshFilter))]
-[ExecuteInEditMode]
-public class ColliderPainterStateScript : MonoBehaviour
+[ExecuteAlways]
+public class ColliderPainter : MonoBehaviour
 {
 	[SerializeField]
-	private List<TriangleGroup> groups = new List<TriangleGroup>();
+	private TriangleGroup[] groups = new TriangleGroup[1];
 	[SerializeField]
-	private List<Mesh> meshes = new List<Mesh>();
+	private Mesh[] meshes = new Mesh[1];
+	[SerializeField]
+	private Mesh sharedMesh;
 
 	[NonSerialized]
 	public bool ForceEdit;
 	[SerializeField, HideInInspector]
 	private Collider[] existingColliders;
-	private MeshFilter meshFilter;
 
-	public int GroupsCount => groups.Count;
+	public int GroupsCount => groups.Length;
 
 	public void ApplyAndRemove()
 	{
@@ -28,16 +30,31 @@ public class ColliderPainterStateScript : MonoBehaviour
 	private void OnEnable()
 	{
 		if (existingColliders != null)
-			BeforeStopEditing();
-		meshFilter = GetComponent<MeshFilter>();
+			RefreshMeshColliders();
+		sharedMesh = GetComponent<MeshFilter>().sharedMesh;
 		if (meshes.Any(m => m == null || !m))
 			UpdateMeshesAndColliders();
+		else
+		{
+			MeshCollider[] colliders = GetComponents<MeshCollider>();
+			if (colliders.Length == meshes.Length && colliders.Any(c => !c.sharedMesh))
+			{
+				for (int i = 0; i < colliders.Length; i++)
+				{
+					colliders[i].sharedMesh = meshes[i];
+				}
+			}
+			else
+			{
+				RefreshMeshColliders(colliders);
+			}
+		}
 	}
 
 	public void BeforeStartEditing()
 	{
 		if (existingColliders != null)
-			BeforeStopEditing();
+			RefreshMeshColliders();
 		existingColliders = GetComponents<Collider>().Where(c => c.enabled).ToArray();
 		foreach (var collider in existingColliders)
 		{
@@ -45,20 +62,22 @@ public class ColliderPainterStateScript : MonoBehaviour
 		}
 	}
 
-	public void BeforeStopEditing()
+	public void RefreshMeshColliders(MeshCollider[] meshColliders = null)
 	{
-		if (existingColliders == null) return;
-
-		foreach (var collider in existingColliders)
-			if (collider)
-				collider.enabled = true;
-
-		existingColliders = null;
-
-		var meshColliders = GetComponents<MeshCollider>();
-		if (meshColliders.Length < groups.Count)
+		if (existingColliders != null)
 		{
-			for (int i = 0; i < groups.Count - meshColliders.Length; i++)
+			foreach (var collider in existingColliders)
+				if (collider)
+					collider.enabled = true;
+
+			existingColliders = null;
+		}
+
+		if (meshColliders == null)
+			meshColliders = GetComponents<MeshCollider>();
+		if (meshColliders.Length < groups.Length)
+		{
+			for (int i = 0; i < groups.Length - meshColliders.Length; i++)
 			{
 				var col = gameObject.AddComponent<MeshCollider>();
 				col.sharedMesh = null;
@@ -69,7 +88,7 @@ public class ColliderPainterStateScript : MonoBehaviour
 		}
 		for (int i = 0; i < meshColliders.Length; i++)
 		{
-			if (i < groups.Count)
+			if (i < groups.Length)
 				meshColliders[i].sharedMesh = meshes[i];
 			else
 				DestroyImmediate(meshColliders[i]);
@@ -90,24 +109,24 @@ public class ColliderPainterStateScript : MonoBehaviour
 
 	public void UpdateMesh(int i)
 	{
-		meshes[i] = meshFilter.sharedMesh.GetMeshFromTriangles(groups[i].indexes, groups[i].name, groups[i].color);
+		meshes[i] = sharedMesh.GetMeshFromTriangles(groups[i].indexes, groups[i].name, groups[i].color);
 	}
 
 	public void FixMissingGroups()
 	{
-		if (groups.Count > 0) return;
+		if (groups.Length > 0) return;
 		AddGroup();
 	}
 
 	public void AddGroup()
 	{
-		groups.Add(new TriangleGroup());
-		meshes.Add(new Mesh());
+		groups = groups.Add(new TriangleGroup());
+		meshes = meshes.Add(new Mesh());
 	}
 	public void RemoveGroup(int i)
 	{
-		groups.RemoveAt(i);
-		meshes.RemoveAt(i);
+		groups = groups.RemoveAt(i);
+		meshes = meshes.RemoveAt(i);
 	}
 
 	public (string name, Color color) GetGroupInfo(int i) => (groups[i].name, groups[i].color);
@@ -123,7 +142,7 @@ public class ColliderPainterStateScript : MonoBehaviour
 
 	public void FixGroupColors()
 	{
-		for (int i = 0; i < groups.Count; i++)
+		for (int i = 0; i < groups.Length; i++)
 		{
 			if (groups[i].color == new Color())
 			{
@@ -138,31 +157,32 @@ public class ColliderPainterStateScript : MonoBehaviour
 
 	public void UpdateMeshesAndColliders()
 	{
-		for (int i = 0; i < groups.Count; i++)
+		for (int i = 0; i < groups.Length; i++)
 		{
 			UpdateMesh(i);
 		}
-		BeforeStopEditing();
+		RefreshMeshColliders();
 	}
 
 	public void TryRestoring()
 	{
-		var origVertices = meshFilter.sharedMesh.vertices;
-		var origNormals = meshFilter.sharedMesh.normals;
-		var origTriangles = meshFilter.sharedMesh.triangles;
+		var origVertices = sharedMesh.vertices;
+		var origNormals = sharedMesh.normals;
+		var origTriangles = sharedMesh.triangles;
 		var meshColliders = GetComponents<MeshCollider>();
 		for (int i = 0; i < meshColliders.Length; i++)
 		{
 			var collider = meshColliders[i];
 
-			var indexes = collider.sharedMesh.GetOriginalMeshTriangleIndexes(meshFilter.sharedMesh, out var name, out var color);
-			groups.Add(new TriangleGroup() { indexes = indexes, name = name, color = color });
-			meshes.Add(collider.sharedMesh);
+			var indexes = collider.sharedMesh.GetOriginalMeshTriangleIndexes(sharedMesh, out var name, out var color);
+			groups = groups.Add(new TriangleGroup() { indexes = indexes, name = name, color = color });
+			meshes = meshes.Add(collider.sharedMesh);
 		}
 	}
 }
 
 [Serializable]
+[DebuggerDisplay("{name} {indexes.Length} {color}")]
 public struct TriangleGroup
 {
 	public int[] indexes;

@@ -6,15 +6,15 @@ public abstract class ColliderPainterInspectorBase : Editor
 {
 	protected static MeshCollider painterMeshCollider;
 	protected MeshFilter targetMeshFilter;
-	protected ColliderPainterStateScript targetScript;
+	protected ColliderPainter targetScript;
 	protected bool isEditing;
 	public static int currentlyEditedGroup;
 	int lastRenderedFrame;
-
+	private Transform[] transformsToRemove;
 
 	protected virtual void OnEnable()
 	{
-		targetScript = (ColliderPainterStateScript)target;
+		targetScript = (ColliderPainter)target;
 		if (targetScript.ForceEdit)
 			StartEditing(0);
 
@@ -53,8 +53,7 @@ public abstract class ColliderPainterInspectorBase : Editor
 
 		SetUpPaintMeshCollider();
 
-		painterMeshCollider.transform.SetParent(targetScript.transform);
-		painterMeshCollider.transform.Reset();
+		painterMeshCollider.transform.PositionAsChildOfNonRigidBody(targetScript.transform, out transformsToRemove);
 		painterMeshCollider.sharedMesh = targetMeshFilter.sharedMesh;
 	}
 
@@ -81,10 +80,10 @@ public abstract class ColliderPainterInspectorBase : Editor
 	{
 		isEditing = false;
 		currentlyEditedGroup = -1;
-		targetScript.BeforeStopEditing();
+		targetScript.RefreshMeshColliders();
 		Repaint();
 		if (painterMeshCollider)
-			DestroyImmediate(painterMeshCollider.gameObject);
+			transformsToRemove.DestroyImmediate();
 	}
 
 	private void SceneView_duringSceneGui(SceneView obj)
