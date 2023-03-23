@@ -183,13 +183,18 @@ public static class Extensions
 
 	public static void PositionAsChildOfNonRigidBody(this Transform transform, Transform parentAsTo, out Transform[] temp)
 	{
-		var list = new List<Transform>();
-		var parentRigidBody = parentAsTo.GetComponentInParent<Rigidbody>().transform;
-		if (parentRigidBody)
+		if (parentAsTo.GetComponentInParent<Rigidbody>() is Rigidbody parentRigidBody)
 		{
-			Reconstruct(parentAsTo, parentRigidBody, ref list, transform);
+			var list = new List<Transform>();
+			Reconstruct(parentAsTo, parentRigidBody.transform, ref list, transform);
+			temp = list.ToArray();
 		}
-		temp = list.ToArray();
+		else
+		{
+			transform.parent = parentAsTo;
+			transform.Reset();
+			temp = new Transform[] { transform };
+		}
 
 		Transform Reconstruct(Transform transformCursor, Transform finalTransform, ref List<Transform> l, Transform copiedTransform = null)
 		{

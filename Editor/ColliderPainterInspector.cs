@@ -93,12 +93,11 @@ public class ColliderPainterInspector : ColliderPainterInspectorBase
 		Rect addButtonRect = toolsRect.Right(20);
 
 		showToolFoldout = showTool.target = EditorGUI.Foldout(toolsRect, showTool.target, "ColliderPainter", true);
-		if (GUI.Button(addButtonRect, "+"))
-		{
-			targetScript.AddGroup();
-		}
 		if (EditorGUILayout.BeginFadeGroup(showTool.faded))
 		{
+			if (GUI.Button(addButtonRect, "+"))
+				targetScript.AddGroup();
+
 			for (int i = 0; i < targetScript.GroupsCount; i++)
 			{
 				GUILayout.BeginHorizontal();
@@ -159,21 +158,20 @@ public class ColliderPainterInspector : ColliderPainterInspectorBase
 		if (targetScript.ForceEdit)
 			StartEditing(0);
 
-		var c = GUI.color;
+		//var c = GUI.color;
 
 		DrawStartStopEditButton(true);
 
-		GUILayout.Space(10);
-		GUI.color = applyButtonColor;
-		if (GUILayout.Button("Apply and Remove"))
-		{
-			Undo.RecordObject(target, target.name + " Applying Painted Collider");
-			targetScript.ApplyAndRemove();
-		}
-		GUI.color = c;
+		//GUILayout.Space(10);
+		//GUI.color = applyButtonColor;
+		//if (GUILayout.Button("Apply and Remove"))
+		//{
+		//	Undo.RecordObject(target, target.name + " Applying Painted Collider");
+		//	targetScript.ApplyAndRemove();
+		//}
+		//GUI.color = c;
 
-		GUILayout.Space(10);
-
+		//GUILayout.Space(10);
 		showDebugFoldout = showDebug.target = EditorGUILayout.Foldout(showDebug.target, "Debug", true);
 		if (EditorGUILayout.BeginFadeGroup(showDebug.faded))
 		{
@@ -221,7 +219,8 @@ public class ColliderPainterInspector : ColliderPainterInspectorBase
 
 			materialPropertyBlock.SetColor(materialColor, color);
 
-			if (targetScript.GetMesh(i).vertices.Length > 0)
+			Mesh mesh = targetScript.GetMesh(i);
+			if (mesh && mesh.vertices.Length > 0)
 				Graphics.DrawMesh(targetScript.GetMesh(i), matrix, material, 0, null, 0, materialPropertyBlock);
 		}
 		Gizmos.color = c;

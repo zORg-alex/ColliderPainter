@@ -109,7 +109,10 @@ public class ColliderPainter : MonoBehaviour
 
 	public void UpdateMesh(int i)
 	{
-		meshes[i] = sharedMesh.GetMeshFromTriangles(groups[i].indexes, groups[i].name, groups[i].color);
+		if (groups[i].indexes.Length > 0)
+			meshes[i] = sharedMesh.GetMeshFromTriangles(groups[i].indexes, groups[i].name, groups[i].color);
+		else
+			meshes[i] = null;
 	}
 
 	public void FixMissingGroups()
@@ -137,7 +140,8 @@ public class ColliderPainter : MonoBehaviour
 		g.name = info.name;
 		g.color = info.color;
 		groups[i] = g;
-		meshes[i].name = info.name;
+		if (meshes[i])
+			meshes[i].name = info.name;
 	}
 
 	public void FixGroupColors()
