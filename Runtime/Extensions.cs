@@ -22,7 +22,7 @@ public static class Extensions
 	{
 		var m = new Mesh();
 		m.vertices = mesh.vertices;
-		m.normals= mesh.normals;
+		m.normals = mesh.normals;
 		return m;
 	}
 	public static Color MultiplyAlpha(this Color color, float alpha)
@@ -45,11 +45,9 @@ public static class Extensions
 		var prevVind = 0;
 		for (int j = 0; j < vertices.Length; j++)
 		{
-			var origVertSpan = originalVertices.AsSpan(prevVind);
-			var origNormSpan = origNormals.AsSpan(prevVind);
-			for (int k = 0; k < origVertSpan.Length; k++)
+			for (int k = 0; k < originalVertices.Length - prevVind; k++)
 			{
-				if (origVertSpan[k] == vertices[j] && origNormSpan[k] == normals[j])
+				if (originalVertices[k + prevVind] == vertices[j] && origNormals[k + prevVind] == normals[j])
 				{
 					origVertIndexes[j] = k + prevVind;
 					prevVind += k;
@@ -79,6 +77,7 @@ public static class Extensions
 
 		return indexes;
 	}
+
 	public static Mesh GetMeshFromTriangles(this Mesh mesh, int[] indexes, string name, Color color = default)
 	{
 		var m = new Mesh();
@@ -136,10 +135,10 @@ public static class Extensions
 		return rect;
 	}
 
-	public static T2[] SelectToArray<T1,T2>(this T1[] array, Func<T1,T2> selector)
+	public static T2[] SelectToArray<T1, T2>(this T1[] array, Func<T1, T2> selector)
 	{
 		var r = new T2[array.Length];
-		for ( var i = 0; i < array.Length; i++ )
+		for (var i = 0; i < array.Length; i++)
 		{
 			r[i] = selector(array[i]);
 		}
@@ -192,22 +191,27 @@ public static class Extensions
 		}
 		temp = list.ToArray();
 
-		Transform Reconstruct(Transform transformCursor, Transform finalTransform, ref List<Transform> list, Transform copiedTransform = null)
+		Transform Reconstruct(Transform transformCursor, Transform finalTransform, ref List<Transform> l, Transform copiedTransform = null)
 		{
 			Transform t;
 			if (copiedTransform == null)
 				copiedTransform = new GameObject().transform;
 			if (transformCursor != finalTransform)
 			{
-				copiedTransform.parent = Reconstruct(transformCursor.parent, finalTransform, ref list);
+				copiedTransform.parent = Reconstruct(transformCursor.parent, finalTransform, ref l);
 			}
 			else
 			{
 				copiedTransform.parent = finalTransform.parent;
 			}
+#if UNITY_2019
+			copiedTransform.localPosition = transformCursor.localPosition;
+			copiedTransform.localRotation = transformCursor.localRotation;
+#else
 			copiedTransform.SetLocalPositionAndRotation(transformCursor.localPosition, transformCursor.localRotation);
+#endif
 			copiedTransform.localScale = transformCursor.localScale;
-			list.Add(copiedTransform);
+			l.Add(copiedTransform);
 			return copiedTransform;
 		}
 	}

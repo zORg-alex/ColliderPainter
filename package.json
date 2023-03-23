@@ -1,0 +1,18 @@
+{
+  "name": "zorg.collider-painter",
+  "displayName": "ColliderPainter",
+  "version": "0.0.1",
+  "unity": "2020.1",
+  "description": "A knock off old Technie Collider Creator. It has a base functionality of the mentioned tool but it's free tool.",
+  "keywords": [
+      "editor",
+      "unity",
+      "collider",
+	  "paint",
+	  "painter"
+  ],
+  "author": {
+    "name": "zORg_alex"
+  },
+  "dependencies": {}
+}
