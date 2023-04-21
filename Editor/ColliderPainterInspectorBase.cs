@@ -162,6 +162,16 @@ public abstract class ColliderPainterInspectorBase : Editor
 			}
 			return;
 		}
+		else
+		{
+			if (AssetDatabase.GetAssetPath(targetScript.asset).Substring(0, DefaultAssetPath.Length) == DefaultAssetPath &&
+				PrefabUtility.GetCorrespondingObjectFromSource(target) is UnityEngine.Object asset)
+			{
+				AssetDatabase.DeleteAsset(AssetDatabase.GetAssetPath(targetScript.asset));
+				targetScript.asset = asset;
+			}
+		}
+
 
 		var existingMeshes = GetAssetMeshes();
 		foreach (var m in existingMeshes)
