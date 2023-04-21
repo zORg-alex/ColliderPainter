@@ -1,4 +1,6 @@
 ﻿
+using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -11,6 +13,7 @@ public abstract class ColliderPainterInspectorBase : Editor
 	public static int currentlyEditedGroup;
 	int lastRenderedFrame;
 	private Transform[] transformsToRemove;
+	private static string DefaultAssetPath = "Assets/Generated/";
 
 	protected virtual void OnEnable()
 	{
@@ -81,6 +84,7 @@ public abstract class ColliderPainterInspectorBase : Editor
 		isEditing = false;
 		currentlyEditedGroup = -1;
 		targetScript.RefreshMeshColliders();
+		RefreshAsset();
 		Repaint();
 		if (painterMeshCollider)
 			transformsToRemove.DestroyImmediate();
@@ -118,4 +122,60 @@ public abstract class ColliderPainterInspectorBase : Editor
 	public abstract void OnGUI();
 
 	public abstract void DrawGraphics();
+
+
+
+	private List<Mesh> GetAssetMeshes()
+	{
+		var list = new List<Mesh>();
+		foreach (var a in AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GetAssetPath(targetScript.asset)))
+		{
+			if (a is Mesh m)
+				list.Add(m);
+		}
+		return list;
+	}
+
+	private void RefreshAsset()
+	{
+		if (!targetScript.asset)
+		{
+			//Save meshes on a prefab or generate a new one
+			if (PrefabUtility.GetCorrespondingObjectFromSource(target) is UnityEngine.Object asset)
+			{
+				targetScript.asset = asset;
+			}
+			else
+			{
+				targetScript.asset = CreateInstance<DummyAsset>();
+				string name = GUID.Generate().ToString();
+				targetScript.asset.name = name;
+				var path = DefaultAssetPath + name + ".asset";
+				if (!AssetDatabase.IsValidFolder(DefaultAssetPath))
+					AssetDatabase.CreateFolder("Assets", "Generated");
+				AssetDatabase.CreateAsset(targetScript.asset, path);
+			}
+			foreach (var m in targetScript.meshes)
+			{
+				if (m)
+					AssetDatabase.AddObjectToAsset(m, AssetDatabase.GetAssetPath(targetScript.asset));
+			}
+			return;
+		}
+
+		var existingMeshes = GetAssetMeshes();
+		foreach (var m in existingMeshes)
+		{
+			if (!targetScript.meshes.Contains(m))
+			{
+				AssetDatabase.RemoveObjectFromAsset(m);
+				DestroyImmediate(m);
+			}
+		}
+		foreach (var m in targetScript.meshes)
+		{
+			if (!existingMeshes.Contains(m) && m)
+				AssetDatabase.AddObjectToAsset(m, targetScript.asset);
+		}
+	}
 }

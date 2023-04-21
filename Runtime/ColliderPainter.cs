@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using UnityEngine;
@@ -9,16 +8,19 @@ using UnityEngine;
 public class ColliderPainter : MonoBehaviour
 {
 	[SerializeField]
-	private TriangleGroup[] groups = new TriangleGroup[1];
+	internal TriangleGroup[] groups = new TriangleGroup[1];
 	[SerializeField]
-	private Mesh[] meshes = new Mesh[1];
+	internal Mesh[] meshes = new Mesh[1];
 	[SerializeField]
-	private Mesh sharedMesh;
+	internal Mesh sharedMesh;
 
 	[NonSerialized]
 	public bool ForceEdit;
 	[SerializeField, HideInInspector]
-	private Collider[] existingColliders;
+	internal Collider[] existingColliders;
+
+	[SerializeField]
+	internal UnityEngine.Object asset;	
 
 	public int GroupsCount => groups.Length;
 

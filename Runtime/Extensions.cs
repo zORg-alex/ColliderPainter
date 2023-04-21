@@ -198,7 +198,6 @@ public static class Extensions
 
 		Transform Reconstruct(Transform transformCursor, Transform finalTransform, ref List<Transform> l, Transform copiedTransform = null)
 		{
-			Transform t;
 			if (copiedTransform == null)
 				copiedTransform = new GameObject().transform;
 			if (transformCursor != finalTransform)

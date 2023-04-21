@@ -1,4 +1,3 @@
-using System.Linq;
 using UnityEditor;
 using UnityEditor.AnimatedValues;
 using UnityEngine;
@@ -28,7 +27,6 @@ public class ColliderPainterInspector : ColliderPainterInspectorBase
 
 	private readonly AnimBool showTool = new AnimBool();
 	private static bool showToolFoldout = true;
-
 
 	private string MainStartButtonTooltip => "This mode locks selection to start painting.";
 
@@ -200,7 +198,9 @@ public class ColliderPainterInspector : ColliderPainterInspectorBase
 			if (!isEditingThis)
 				StartEditing(i);
 			else
+			{
 				StopEditing();
+			}
 			SceneView.RepaintAll();
 		}
 		GUI.color = c;
