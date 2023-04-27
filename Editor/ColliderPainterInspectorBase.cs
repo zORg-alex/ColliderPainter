@@ -136,6 +136,44 @@ public abstract class ColliderPainterInspectorBase : Editor
 		return list;
 	}
 
+	private bool IsPartOfPrefab()
+	{
+		//In scene
+		if (PrefabUtility.GetCorrespondingObjectFromSource(target) is UnityEngine.Object asset)
+			return true;
+		//In prefab scene
+		if (string.IsNullOrEmpty(targetScript.gameObject.scene.path) && !string.IsNullOrEmpty(targetScript.gameObject.scene.name))
+			return true;
+		return false;
+	}
+
+	private IList<Mesh> GetAllMeshes()
+	{
+		var list = new List<Mesh>();
+		var prefabRoot = GetPrefabRootObject();
+		if (prefabRoot == null)
+			return targetScript.meshes;
+
+		var painters = prefabRoot.GetComponentsInChildren<ColliderPainter>();
+		foreach (var p in painters)
+		{
+			list.AddRange(p.meshes);
+		}
+		return list;
+	}
+
+	private GameObject GetPrefabRootObject()
+	{
+		//In scene
+		if (PrefabUtility.GetCorrespondingObjectFromSource(target) is UnityEngine.Object asset)
+			return asset is GameObject go ? go : ((Component)asset).gameObject;
+		//In prefab scene
+		if (string.IsNullOrEmpty(targetScript.gameObject.scene.path) && !string.IsNullOrEmpty(targetScript.gameObject.scene.name) &&
+			targetScript.gameObject.scene.GetRootGameObjects() is GameObject[] obj && obj.Length == 1)
+			return obj[0];
+		return null;
+	}
+
 	private void RefreshAsset()
 	{
 		if (!targetScript.asset)
@@ -164,7 +202,8 @@ public abstract class ColliderPainterInspectorBase : Editor
 		}
 		else
 		{
-			if (AssetDatabase.GetAssetPath(targetScript.asset).Substring(0, DefaultAssetPath.Length) == DefaultAssetPath &&
+			string path = AssetDatabase.GetAssetPath(targetScript.asset);
+			if (path.Length > DefaultAssetPath.Length && path.Substring(0, DefaultAssetPath.Length) == DefaultAssetPath &&
 				PrefabUtility.GetCorrespondingObjectFromSource(target) is UnityEngine.Object asset)
 			{
 				AssetDatabase.DeleteAsset(AssetDatabase.GetAssetPath(targetScript.asset));
@@ -173,13 +212,12 @@ public abstract class ColliderPainterInspectorBase : Editor
 		}
 
 
-		var existingMeshes = GetAssetMeshes();
+		var existingMeshes = GetAllMeshes();
 		foreach (var m in existingMeshes)
 		{
 			if (!targetScript.meshes.Contains(m))
 			{
 				AssetDatabase.RemoveObjectFromAsset(m);
-				DestroyImmediate(m);
 			}
 		}
 		foreach (var m in targetScript.meshes)
